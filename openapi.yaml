@@ -1,0 +1,261 @@
+openapi: 3.0.3
+info:
+  title: ETSI GS QKD 014
+  version: 1.1.1
+  description: REST-based API for delivering QKD-generated keys between SAEs and KMEs.
+
+servers:
+  - url: https://{KME_hostname}
+    variables:
+      KME_hostname:
+        default: example.com
+
+paths:
+  /api/v1/keys/{slave_SAE_ID}/status:
+    get:
+      summary: Get key delivery status
+      parameters:
+        - in: path
+          name: slave_SAE_ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Status object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          description: Unauthorized
+        "503":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/keys/{slave_SAE_ID}/enc_keys:
+    get:
+      summary: Get key(s) using simplified GET (with URL params)
+      parameters:
+        - in: path
+          name: slave_SAE_ID
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: number
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: size
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Key container
+          content:
+            application/json:
+              schema:
+              $ref: "#/components/schemas/KeyContainer"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          description: Unauthorized
+        "503":
+          $ref: "#/components/responses/Error"
+    post:
+      summary: Get key(s) from KME
+      parameters:
+        - in: path
+          name: slave_SAE_ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KeyRequest"
+      responses:
+        "200":
+          description: Key container
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeyContainer"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          description: Unauthorized
+        "503":
+          $ref: "#/components/responses/Error"
+
+  /api/v1/keys/{master_SAE_ID}/dec_keys:
+    get:
+      summary: Get key(s) with key IDs using simplified GET (single key ID only)
+      parameters:
+        - in: path
+          name: slave_SAE_ID
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: key_ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Key container
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeyContainer"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          description: Unauthorized
+        "503":
+          $ref: "#/components/responses/Error"
+
+    post:
+      summary: Get key(s) using key IDs
+      parameters:
+        - in: path
+          name: master_SAE_ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KeyIDs"
+      responses:
+        "200":
+          description: Key container
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeyContainer"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          description: Unauthorized
+        "503":
+          $ref: "#/components/responses/Error"
+
+components:
+  schemas:
+    Status:
+      type: object
+      properties:
+        source_KME_ID:
+          type: string
+        target_KME_ID:
+          type: string
+        master_SAE_ID:
+          type: string
+        slave_SAE_ID:
+          type: string
+        key_size:
+          type: integer
+        stored_key_count:
+          type: integer
+        max_key_count:
+          type: integer
+        max_key_per_request:
+          type: integer
+        max_key_size:
+          type: integer
+        min_key_size:
+          type: integer
+        max_SAE_ID_count:
+          type: integer
+        status_extension:
+          type: object
+          nullable: true
+
+    KeyRequest:
+      type: object
+      properties:
+        number:
+          type: integer
+        size:
+          type: integer
+        additional_slave_SAE_IDs:
+          type: array
+          items:
+            type: string
+        extension_mandatory:
+          type: array
+          items:
+            type: object
+        extension_optional:
+          type: array
+          items:
+            type: object
+
+    KeyContainer:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            properties:
+              key_ID:
+                type: string
+                format: uuid
+              key:
+                type: string
+                description: Base64 encoded key
+              key_ID_extension:
+                type: object
+                nullable: true
+              key_extension:
+                type: object
+                nullable: true
+        key_container_extension:
+          type: object
+          nullable: true
+
+    KeyIDs:
+      type: object
+      properties:
+        key_IDs:
+          type: array
+          items:
+            type: object
+            properties:
+              key_ID:
+                type: string
+                format: uuid
+              key_ID_extension:
+                type: object
+                nullable: true
+        key_IDs_extension:
+          type: object
+          nullable: true
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+
+  responses:
+    Error:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
